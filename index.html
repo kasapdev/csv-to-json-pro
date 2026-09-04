@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#08090d">
+  <meta name="description" content="Convert CSV to JSON and back, entirely offline. Handles quoted fields, type inference, and array-of-objects or array-of-arrays output — a fast, private CSV/JSON workbench.">
+  <title>CSV ⇄ JSON Converter — Web Utility Suite</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="topbar container">
+    <a class="brand" href="https://github.com/kasapdev" aria-label="Back to kasapdev tools">
+      <span class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 3H7a2 2 0 0 0-2 2v4a2 2 0 0 1-2 2 2 2 0 0 1 2 2v4a2 2 0 0 0 2 2h1"/>
+          <path d="M16 3h1a2 2 0 0 1 2 2v4a2 2 0 0 0 2 2 2 2 0 0 0-2 2v4a2 2 0 0 1-2 2h-1"/>
+        </svg>
+      </span>
+      <span class="col" style="gap:0">
+        <span>CSV ⇄ JSON Converter</span>
+        <span class="sub">Web Utility Suite</span>
+      </span>
+    </a>
+    <span class="spacer"></span>
+
+    <span id="statusBadge" class="badge" role="status" aria-live="polite" title="Conversion status">
+      <span class="status-dot" aria-hidden="true"></span><span id="statusText">Ready</span>
+    </span>
+
+    <button class="btn btn--icon" data-shortcut-help title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="2" y="4" width="20" height="16" rx="2"/>
+        <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10"/>
+      </svg>
+    </button>
+    <button class="btn btn--icon" data-theme-toggle title="Toggle theme" aria-label="Toggle theme">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+      </svg>
+    </button>
+  </header>
+
+  <main class="container">
+    <!-- Mode switch -->
+    <section class="panel toolbar-panel fade-in" aria-label="Conversion mode">
+      <div class="toolbar">
+        <div class="toolbar-group">
+          <div class="segmented" role="tablist" aria-label="Direction">
+            <button id="modeCsvToJson" type="button" role="tab" aria-selected="true" class="is-active">CSV → JSON</button>
+            <button id="modeJsonToCsv" type="button" role="tab" aria-selected="false">JSON → CSV</button>
+          </div>
+        </div>
+
+        <div id="csvOptions" class="toolbar-group">
+          <div class="segmented" role="tablist" aria-label="Output shape">
+            <button id="shapeObjects" type="button" role="tab" aria-selected="true" class="is-active">Array of objects</button>
+            <button id="shapeArrays" type="button" role="tab" aria-selected="false">Array of arrays</button>
+          </div>
+          <label class="check" title="Detect numbers, booleans and null instead of leaving everything as text">
+            <span class="switch">
+              <input type="checkbox" id="typeInfer" checked aria-label="Infer types">
+              <span class="track"></span><span class="thumb"></span>
+            </span>
+            <span class="secondary">Infer types</span>
+          </label>
+          <label class="check" title="Treat the first row as the header row">
+            <span class="switch">
+              <input type="checkbox" id="hasHeader" checked aria-label="First row is header">
+              <span class="track"></span><span class="thumb"></span>
+            </span>
+            <span class="secondary">Header row</span>
+          </label>
+        </div>
+
+        <span class="spacer hide-sm"></span>
+
+        <div class="toolbar-group">
+          <button id="btnConvert" class="btn btn--primary" title="Convert (Ctrl/Cmd+Enter)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+            Convert
+          </button>
+          <button id="btnCopy" class="btn btn--sm" title="Copy output">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy
+          </button>
+          <button id="btnDownload" class="btn btn--sm" title="Download output (Ctrl/Cmd+S)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Download
+          </button>
+          <button id="btnUpload" class="btn btn--sm" title="Upload a file">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            Upload
+          </button>
+          <input type="file" id="fileInput" accept=".csv,.json,text/csv,application/json,text/plain" hidden>
+          <button id="btnSample" class="btn btn--sm btn--ghost" title="Load a sample document">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+            Sample
+          </button>
+          <button id="btnClear" class="btn btn--sm btn--ghost" title="Clear everything">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+            Clear
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Two-pane editor -->
+    <section class="editor rise" aria-label="Converter">
+      <div class="pane panel pane--input">
+        <div class="pane-head">
+          <h2 class="pane-title" id="inputTitle">CSV Input</h2>
+          <span id="inputStats" class="muted pane-meta mono">0 chars</span>
+        </div>
+        <textarea id="input" class="mono" spellcheck="false" autocapitalize="off" autocomplete="off"
+          aria-label="Source input"
+          placeholder="name,age,active&#10;Ada,36,true&#10;Grace,85,false"></textarea>
+      </div>
+
+      <div class="pane panel pane--output">
+        <div class="pane-head">
+          <h2 class="pane-title" id="outputTitle">JSON Output</h2>
+          <span id="outputStats" class="muted pane-meta mono"></span>
+        </div>
+        <div class="output-scroll">
+          <pre id="output" class="output-code mono" aria-live="polite" tabindex="0"><code id="outputCode"></code></pre>
+          <div id="emptyState" class="empty output-empty">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+            <p>Your converted output will appear here.</p>
+            <button id="btnSampleEmpty" class="btn btn--sm">Load a sample</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Error panel -->
+    <section id="errorPanel" class="panel error-panel fade-in" role="alert" hidden>
+      <div class="error-head">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+        <strong>Conversion error</strong>
+      </div>
+      <p id="errorMsg" class="error-msg mono"></p>
+    </section>
+
+    <!-- Stats bar -->
+    <section id="statsBar" class="panel stats-bar fade-in" aria-label="Document statistics" hidden>
+      <div class="stat">
+        <span class="stat-label">Rows</span>
+        <span id="statRows" class="stat-value gradient-text">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Columns</span>
+        <span id="statCols" class="stat-value">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Size</span>
+        <span id="statSize" class="stat-value">—</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer container">
+    Part of the <a href="https://github.com/kasapdev">kasapdev</a> tools · MIT Licensed
+  </footer>
+
+  <!-- Shortcuts help modal -->
+  <div id="helpBackdrop" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+      <div class="row between center" style="margin-bottom:var(--space-4)">
+        <h3 id="helpTitle" style="margin:0">Keyboard shortcuts</h3>
+        <button id="helpClose" class="btn btn--icon btn--ghost" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <table class="shortcut-table">
+        <tbody id="shortcutRows"></tbody>
+      </table>
+      <p class="muted" style="margin:var(--space-4) 0 0;font-size:13px">Tip: <kbd>mod</kbd> means <kbd>Ctrl</kbd> on Windows/Linux and <kbd>⌘</kbd> on macOS.</p>
+    </div>
+  </div>
+
+  <script src="assets/js/core.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
