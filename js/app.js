@@ -506,9 +506,11 @@
   document.getElementById('btnSampleEmpty').addEventListener('click', loadSample);
 
   input.addEventListener('input', function () { updateInputMeta(); persistDebounced(); });
-  input.addEventListener('keydown', function (e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); convert(); }
-  });
+  /* Ctrl/Cmd+Enter is handled by the global "mod+enter" shortcut below, which
+     fires even while typing in this textarea — a separate local keydown
+     handler here would double-fire convert() (and double the "Converted ✓"
+     toast) on every press, since the event bubbles from the textarea up to
+     document where the shortcut is also listening. */
 
   WUS.registerShortcut('mod+enter', function () { convert(); }, 'Convert');
   WUS.registerShortcut('mod+s', function () { downloadOutput(); }, 'Download output');
